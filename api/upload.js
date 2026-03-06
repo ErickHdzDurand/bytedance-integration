@@ -16,7 +16,7 @@ module.exports = async function handler(req, res) {
     access: "public",
     contentType: "image/jpeg",
     addRandomSuffix: false,
-    token: process.env.VERCEL_BLOB_TOKEN
+    token: process.env.VERCEL_BLOB_TOKEN_READ_WRITE_TOKEN
   });
 
     return res.status(200).json({
