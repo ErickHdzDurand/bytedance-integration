@@ -12,11 +12,12 @@ module.exports = async function handler(req, res) {
 
     const file = fs.readFileSync(filePath);
 
-    const blob = await put("tornamesa.jpg", file, {
-      access: "public",
-      contentType: "image/jpeg",
-      addRandomSuffix: false
-    });
+  const blob = await put("tornamesa.jpg", file, {
+    access: "public",
+    contentType: "image/jpeg",
+    addRandomSuffix: false,
+    token: process.env.VERCEL_BLOB_TOKEN
+  });
 
     return res.status(200).json({
       ok: true,
