@@ -1,32 +1,31 @@
+const { put } = require("@vercel/blob");
 const fs = require("fs");
 const path = require("path");
 
 module.exports = async function handler(req, res) {
   try {
-    const img = (req.query && req.query.img) ? req.query.img : "Tornamesa.jpg";
-
-    // Evitar path traversal
-    if (img.includes("..") || img.includes("/")) {
-      return res.status(400).json({ error: "Nombre de imagen inválido" });
-    }
-
-    const filePath = path.join(process.cwd(), "imagenes", img);
+    const filePath = path.join(process.cwd(), "imagenes", "Tornamesa.jpg");
 
     if (!fs.existsSync(filePath)) {
-      return res.status(404).json({ error: `No existe imagenes/${img}` });
+      return res.status(404).json({ error: "No existe imagenes/Tornamesa.jpg" });
     }
 
-    const ext = path.extname(img).toLowerCase();
-    const mime =
-      ext === ".png" ? "image/png" :
-      ext === ".webp" ? "image/webp" :
-      "image/jpeg";
+    const file = fs.readFileSync(filePath);
 
-    const image = fs.readFileSync(filePath);
+    const blob = await put("tornamesa.jpg", file, {
+      access: "public",
+      contentType: "image/jpeg",
+      addRandomSuffix: false
+    });
 
-    res.setHeader("Content-Type", mime);
-    res.status(200).send(image);
+    return res.status(200).json({
+      ok: true,
+      url: blob.url
+    });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({
+      ok: false,
+      error: err.message
+    });
   }
 };
