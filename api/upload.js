@@ -4,15 +4,15 @@ const path = require("path");
 
 module.exports = async function handler(req, res) {
   try {
-    const filePath = path.join(process.cwd(), "imagenes", "Tornamesa.jpg");
+    const filePath = path.join(process.cwd(), "imagenes", "Short_Afilador_2.jpg");
 
     if (!fs.existsSync(filePath)) {
-      return res.status(404).json({ error: "No existe imagenes/Tornamesa.jpg" });
+      return res.status(404).json({ error: "No existe imagenes/Short_Afilador_2.jpg" });
     }
 
     const file = fs.readFileSync(filePath);
 
-  const blob = await put("tornamesa.jpg", file, {
+  const blob = await put("short_afilador_2.jpg", file, {
     access: "public",
     contentType: "image/jpeg",
     addRandomSuffix: false,
