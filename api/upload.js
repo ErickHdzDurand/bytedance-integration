@@ -1,26 +1,77 @@
 const { put } = require("@vercel/blob");
-const fs = require("fs");
-const path = require("path");
 
 module.exports = async function handler(req, res) {
   try {
-    const filePath = path.join(process.cwd(), "imagenes", "Short_Afilador_2.jpg");
-
-    if (!fs.existsSync(filePath)) {
-      return res.status(404).json({ error: "No existe imagenes/Short_Afilador_2.jpg" });
+    if (req.method !== "POST") {
+      return res.status(405).json({
+        ok: false,
+        error: "Método no permitido. Usa POST."
+      });
     }
 
-    const file = fs.readFileSync(filePath);
+    console.log("TOKEN presente:", !!process.env.BLOB_READ_WRITE_TOKEN);
 
-  const blob = await put("short_afilador_2.jpg", file, {
-    access: "public",
-    contentType: "image/jpeg",
-    addRandomSuffix: false,
-    token: process.env.VERCEL_BLOB_TOKEN_READ_WRITE_TOKEN
-  });
+    const chunks = [];
+    for await (const chunk of req) {
+      chunks.push(chunk);
+    }
+    const bodyBuffer = Buffer.concat(chunks);
+
+    const contentType = req.headers["content-type"] || "";
+    const boundaryMatch = contentType.match(/boundary=(.*)$/);
+
+    if (!boundaryMatch) {
+      return res.status(400).json({
+        ok: false,
+        error: "No se encontró boundary en multipart/form-data"
+      });
+    }
+
+    const boundary = `--${boundaryMatch[1]}`;
+    const bodyText = bodyBuffer.toString("binary");
+
+    const filenameMatch = bodyText.match(/filename="([^"]+)"/);
+    if (!filenameMatch) {
+      return res.status(400).json({
+        ok: false,
+        error: "No se encontró archivo en la petición"
+      });
+    }
+
+    const originalFilename = filenameMatch[1];
+    const extension = originalFilename.includes(".")
+      ? originalFilename.substring(originalFilename.lastIndexOf("."))
+      : ".jpg";
+
+    const startFileIndex = bodyText.indexOf("\r\n\r\n") + 4;
+    const endBoundaryIndex = bodyText.lastIndexOf(boundary) - 2;
+
+    if (startFileIndex < 4 || endBoundaryIndex <= startFileIndex) {
+      return res.status(400).json({
+        ok: false,
+        error: "No se pudo extraer el contenido del archivo"
+      });
+    }
+
+    const fileBuffer = bodyBuffer.subarray(startFileIndex, endBoundaryIndex);
+
+    const safeBaseName = originalFilename
+      .replace(/\.[^/.]+$/, "")
+      .replace(/[^a-zA-Z0-9-_]/g, "_");
+
+    const blobName = `${Date.now()}_${safeBaseName}${extension}`;
+
+    const blob = await put(blobName, fileBuffer, {
+      access: "public",
+      addRandomSuffix: false,
+      contentType: req.headers["x-file-content-type"] || "application/octet-stream",
+      token: process.env.BLOB_READ_WRITE_TOKEN
+    });
 
     return res.status(200).json({
       ok: true,
+      originalFilename,
+      blobName,
       url: blob.url
     });
   } catch (err) {
